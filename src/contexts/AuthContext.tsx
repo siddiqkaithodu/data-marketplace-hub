@@ -1,6 +1,6 @@
-import { createContext, useContext, ReactNode } from 'react'
-import { useKV } from '@github/spark/hooks'
+import { createContext, useContext, ReactNode, useEffect, useState } from 'react'
 import { User } from '@/types'
+import * as api from '@/lib/api'
 
 interface AuthContextType {
   user: User | null
@@ -8,55 +8,91 @@ interface AuthContextType {
   signUp: (email: string, password: string, name: string) => Promise<void>
   signOut: () => void
   isAuthenticated: boolean
+  isLoading: boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useKV<User | null>('auth-user', null)
+  const [user, setUser] = useState<User | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Check for existing token on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      const token = api.getAccessToken()
+      if (token) {
+        try {
+          const userData = await api.getCurrentUser()
+          setUser({
+            id: String(userData.id),
+            email: userData.email,
+            name: userData.name,
+            plan: userData.plan,
+            apiKey: userData.api_key || undefined,
+            createdAt: userData.created_at
+          })
+        } catch (error) {
+          // Token is invalid or expired, remove it
+          console.warn('Session expired:', error instanceof Error ? error.message : 'Unknown error')
+          api.removeAccessToken()
+        }
+      }
+      setIsLoading(false)
+    }
+    checkAuth()
+  }, [])
 
   const signIn = async (email: string, password: string) => {
-    await new Promise(resolve => setTimeout(resolve, 800))
+    const tokenResponse = await api.signIn({ email, password })
+    api.setAccessToken(tokenResponse.access_token)
     
-    const newUser: User = {
-      id: Math.random().toString(36).substring(7),
-      email,
-      name: email.split('@')[0],
-      plan: 'free',
-      apiKey: `sk_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`,
-      createdAt: new Date().toISOString()
-    }
-    
-    setUser(newUser)
+    // Fetch user data after successful login
+    const userData = await api.getCurrentUser()
+    setUser({
+      id: String(userData.id),
+      email: userData.email,
+      name: userData.name,
+      plan: userData.plan,
+      apiKey: userData.api_key || undefined,
+      createdAt: userData.created_at
+    })
   }
 
   const signUp = async (email: string, password: string, name: string) => {
-    await new Promise(resolve => setTimeout(resolve, 800))
+    // First register the user
+    await api.signUp({ email, password, name })
     
-    const newUser: User = {
-      id: Math.random().toString(36).substring(7),
-      email,
-      name,
-      plan: 'free',
-      apiKey: `sk_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`,
-      createdAt: new Date().toISOString()
-    }
+    // Then sign in to get token
+    const tokenResponse = await api.signIn({ email, password })
+    api.setAccessToken(tokenResponse.access_token)
     
-    setUser(newUser)
+    // Fetch user data
+    const userData = await api.getCurrentUser()
+    setUser({
+      id: String(userData.id),
+      email: userData.email,
+      name: userData.name,
+      plan: userData.plan,
+      apiKey: userData.api_key || undefined,
+      createdAt: userData.created_at
+    })
   }
 
   const signOut = () => {
+    api.removeAccessToken()
     setUser(null)
   }
 
   return (
     <AuthContext.Provider 
       value={{ 
-        user: user ?? null, 
+        user, 
         signIn, 
         signUp, 
         signOut, 
-        isAuthenticated: user !== null && user !== undefined
+        isAuthenticated: user !== null,
+        isLoading
       }}
     >
       {children}
