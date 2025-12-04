@@ -19,13 +19,49 @@ Flexible subscription tiers (Free, Starter, Professional, Enterprise) with clear
 ### 🔐 User Authentication
 Secure sign up/sign in system with session management for accessing protected features and API keys.
 
-## 🚀 Getting Started
+## 🐳 Docker Setup (Recommended)
+
+The application is fully containerized with Docker, including the FastAPI backend and PostgreSQL database.
+
+### Prerequisites
+- Docker and Docker Compose
+
+### Quick Start
+
+```bash
+# Start all services (database, backend, frontend)
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop all services
+docker-compose down
+```
+
+### Services
+
+| Service | Port | Description |
+|---------|------|-------------|
+| Frontend | 5173 | React application |
+| Backend | 8000 | FastAPI REST API |
+| Database | 5432 | PostgreSQL database |
+
+### Access Points
+
+- **Frontend**: http://localhost:5173
+- **Backend API**: http://localhost:8000
+- **API Documentation**: http://localhost:8000/api/v1/docs
+- **ReDoc**: http://localhost:8000/api/v1/redoc
+
+## 🚀 Local Development (Without Docker)
 
 ### Prerequisites
 - Node.js 18+
-- npm or yarn
+- Python 3.12+
+- PostgreSQL 16+
 
-### Installation
+### Frontend Setup
 
 ```bash
 # Install dependencies
@@ -35,18 +71,57 @@ npm install
 npm run dev
 ```
 
+### Backend Setup
+
+```bash
+# Navigate to backend directory
+cd backend
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Set environment variables
+export DATABASE_URL=postgresql://dataflow:dataflow@localhost:5432/dataflow
+export SECRET_KEY=your-super-secret-key
+
+# Start the server
+uvicorn app.main:app --reload --port 8000
+```
+
 ### Available Scripts
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Start development server |
-| `npm run build` | Build for production |
+| `npm run dev` | Start frontend development server |
+| `npm run build` | Build frontend for production |
 | `npm run lint` | Run ESLint |
 | `npm run preview` | Preview production build |
 
-## 🔌 Backend API Endpoints (Placeholders)
+## 🛠️ Tech Stack
 
-The following API endpoints need to be implemented for full backend functionality:
+### Frontend
+- **Framework**: React 19, TypeScript
+- **Styling**: Tailwind CSS 4
+- **UI Components**: Radix UI, shadcn/ui
+- **Icons**: Phosphor Icons
+- **Build Tool**: Vite 7
+- **State Management**: React Context, TanStack Query
+- **Forms**: React Hook Form, Zod validation
+
+### Backend
+- **Framework**: FastAPI (Python 3.12)
+- **ORM**: SQLModel
+- **Database**: PostgreSQL 16
+- **Authentication**: JWT (python-jose)
+- **Password Hashing**: bcrypt (passlib)
+
+## 🔌 Backend API Endpoints
+
+All API endpoints are implemented in the FastAPI backend:
 
 ### Authentication APIs
 
@@ -68,6 +143,7 @@ The following API endpoints need to be implemented for full backend functionalit
 | `GET` | `/api/v1/datasets/{id}/preview` | Get sample preview data |
 | `POST` | `/api/v1/datasets/{id}/download` | Generate download link for dataset |
 | `GET` | `/api/v1/datasets/search` | Search datasets by keyword/tags |
+| `POST` | `/api/v1/datasets/{id}/export` | Export dataset in specified format |
 
 ### Scraping APIs
 
@@ -78,14 +154,6 @@ The following API endpoints need to be implemented for full backend functionalit
 | `GET` | `/api/v1/scrape/{requestId}/results` | Get scraping results |
 | `GET` | `/api/v1/scrape/history` | Get user's scraping history |
 | `DELETE` | `/api/v1/scrape/{requestId}` | Cancel pending scraping request |
-
-### Export APIs
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/api/v1/datasets/{id}/export` | Export dataset in specified format (CSV/JSON/Parquet) |
-| `GET` | `/api/v1/exports/{exportId}` | Get export job status |
-| `GET` | `/api/v1/exports/{exportId}/download` | Download exported file |
 
 ### Account & Billing APIs
 
@@ -110,46 +178,64 @@ The following API endpoints need to be implemented for full backend functionalit
 | `GET` | `/api/v1/webhooks` | List registered webhooks |
 | `DELETE` | `/api/v1/webhooks/{id}` | Delete a webhook |
 
-## 🛠️ Tech Stack
-
-- **Frontend**: React 19, TypeScript
-- **Styling**: Tailwind CSS 4
-- **UI Components**: Radix UI, shadcn/ui
-- **Icons**: Phosphor Icons
-- **Build Tool**: Vite 7
-- **State Management**: React Context, TanStack Query
-- **Forms**: React Hook Form, Zod validation
-
 ## 📁 Project Structure
 
 ```
-src/
-├── components/          # React components
-│   ├── ui/             # Reusable UI components (shadcn)
-│   ├── HomePage.tsx    # Dataset marketplace browser
-│   ├── ScraperPage.tsx # Custom URL scraper interface
-│   ├── ApiDocsPage.tsx # API documentation center
-│   ├── PricingPage.tsx # Pricing & plans display
-│   ├── AuthDialog.tsx  # Authentication modal
-│   └── Navbar.tsx      # Navigation component
-├── contexts/           # React context providers
-│   └── AuthContext.tsx # Authentication state management
-├── hooks/              # Custom React hooks
-├── lib/                # Utility functions and data
-│   ├── data.ts        # Mock data for datasets, plans, APIs
-│   └── utils.ts       # Helper utilities
-├── types/              # TypeScript type definitions
-│   └── index.ts       # Shared types (User, Dataset, etc.)
-└── App.tsx            # Main application component
+├── backend/                 # FastAPI backend
+│   ├── app/
+│   │   ├── api/            # API route handlers
+│   │   │   ├── auth.py     # Authentication endpoints
+│   │   │   ├── datasets.py # Dataset endpoints
+│   │   │   ├── scrape.py   # Scraping endpoints
+│   │   │   ├── account.py  # Account & billing endpoints
+│   │   │   └── webhooks.py # Webhook endpoints
+│   │   ├── core/           # Core configuration
+│   │   │   ├── config.py   # Settings management
+│   │   │   ├── database.py # Database connection
+│   │   │   └── security.py # Authentication utilities
+│   │   ├── models/         # SQLModel database models
+│   │   │   ├── user.py
+│   │   │   ├── dataset.py
+│   │   │   ├── scrape_request.py
+│   │   │   └── pricing_plan.py
+│   │   ├── schemas/        # Pydantic schemas
+│   │   └── main.py         # FastAPI application
+│   ├── requirements.txt
+│   └── Dockerfile
+├── src/                     # React frontend
+│   ├── components/          # React components
+│   │   ├── ui/             # shadcn/ui components
+│   │   ├── HomePage.tsx
+│   │   ├── ScraperPage.tsx
+│   │   ├── ApiDocsPage.tsx
+│   │   ├── PricingPage.tsx
+│   │   ├── AuthDialog.tsx
+│   │   └── Navbar.tsx
+│   ├── contexts/           # React context providers
+│   ├── hooks/              # Custom React hooks
+│   ├── lib/                # Utility functions
+│   ├── types/              # TypeScript definitions
+│   └── App.tsx
+├── docker-compose.yml       # Docker orchestration
+├── Dockerfile              # Frontend container
+└── package.json
 ```
 
 ## 🔐 Environment Variables
 
-For backend integration, the following environment variables will be needed:
+### Backend (.env)
 
 ```env
-VITE_API_BASE_URL=https://api.dataflow.com
-VITE_API_VERSION=v1
+DATABASE_URL=postgresql://dataflow:dataflow@db:5432/dataflow
+SECRET_KEY=your-super-secret-key-change-in-production
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+```
+
+### Frontend
+
+```env
+VITE_API_BASE_URL=http://localhost:8000
 ```
 
 ## 📄 License
