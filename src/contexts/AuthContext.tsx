@@ -7,6 +7,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<void>
   signUp: (email: string, password: string, name: string) => Promise<void>
   signOut: () => void
+  refreshUser: () => Promise<void>
   isAuthenticated: boolean
   isLoading: boolean
 }
@@ -17,21 +18,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
+  const fetchUserData = async () => {
+    const userData = await api.getCurrentUser()
+    setUser({
+      id: String(userData.id),
+      email: userData.email,
+      name: userData.name,
+      plan: userData.plan,
+      apiKey: userData.api_key || undefined,
+      createdAt: userData.created_at
+    })
+  }
+
   // Check for existing token on mount
   useEffect(() => {
     const checkAuth = async () => {
       const token = api.getAccessToken()
       if (token) {
         try {
-          const userData = await api.getCurrentUser()
-          setUser({
-            id: String(userData.id),
-            email: userData.email,
-            name: userData.name,
-            plan: userData.plan,
-            apiKey: userData.api_key || undefined,
-            createdAt: userData.created_at
-          })
+          await fetchUserData()
         } catch (error) {
           // Token is invalid or expired, remove it
           console.warn('Session expired:', error instanceof Error ? error.message : 'Unknown error')
@@ -48,15 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     api.setAccessToken(tokenResponse.access_token)
     
     // Fetch user data after successful login
-    const userData = await api.getCurrentUser()
-    setUser({
-      id: String(userData.id),
-      email: userData.email,
-      name: userData.name,
-      plan: userData.plan,
-      apiKey: userData.api_key || undefined,
-      createdAt: userData.created_at
-    })
+    await fetchUserData()
   }
 
   const signUp = async (email: string, password: string, name: string) => {
@@ -68,20 +65,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     api.setAccessToken(tokenResponse.access_token)
     
     // Fetch user data
-    const userData = await api.getCurrentUser()
-    setUser({
-      id: String(userData.id),
-      email: userData.email,
-      name: userData.name,
-      plan: userData.plan,
-      apiKey: userData.api_key || undefined,
-      createdAt: userData.created_at
-    })
+    await fetchUserData()
   }
 
   const signOut = () => {
     api.removeAccessToken()
     setUser(null)
+  }
+
+  const refreshUser = async () => {
+    const token = api.getAccessToken()
+    if (token) {
+      await fetchUserData()
+    }
   }
 
   return (
@@ -91,6 +87,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signIn, 
         signUp, 
         signOut, 
+        refreshUser,
         isAuthenticated: user !== null,
         isLoading
       }}
