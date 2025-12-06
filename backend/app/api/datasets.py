@@ -19,6 +19,15 @@ from datetime import datetime, timedelta
 router = APIRouter(prefix="/datasets", tags=["Datasets"])
 
 
+def sanitize_search_query(query: str) -> str:
+    """Escape special SQL LIKE characters and limit length."""
+    # Limit query length to prevent abuse
+    query = query[:100]
+    # Escape SQL LIKE special characters
+    query = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return query
+
+
 @router.get("", response_model=DatasetListResponse)
 async def list_datasets(
     platform: Optional[Platform] = None,
@@ -30,6 +39,9 @@ async def list_datasets(
     session: Session = Depends(get_session)
 ):
     """Retrieve a list of all available datasets with filtering options."""
+    # Sanitize search query once at the start
+    sanitized_search = sanitize_search_query(search) if search else None
+    
     statement = select(Dataset)
     
     # Apply filters
@@ -39,9 +51,9 @@ async def list_datasets(
         statement = statement.where(Dataset.category == category)
     if is_premium is not None:
         statement = statement.where(Dataset.is_premium == is_premium)
-    if search:
+    if sanitized_search:
         statement = statement.where(
-            Dataset.name.ilike(f"%{search}%") | Dataset.description.ilike(f"%{search}%")
+            Dataset.name.ilike(f"%{sanitized_search}%") | Dataset.description.ilike(f"%{sanitized_search}%")
         )
     
     # Get total count
@@ -52,9 +64,9 @@ async def list_datasets(
         total_statement = total_statement.where(Dataset.category == category)
     if is_premium is not None:
         total_statement = total_statement.where(Dataset.is_premium == is_premium)
-    if search:
+    if sanitized_search:
         total_statement = total_statement.where(
-            Dataset.name.ilike(f"%{search}%") | Dataset.description.ilike(f"%{search}%")
+            Dataset.name.ilike(f"%{sanitized_search}%") | Dataset.description.ilike(f"%{sanitized_search}%")
         )
     
     total = len(session.exec(total_statement).all())
@@ -170,15 +182,16 @@ async def download_dataset(
 
 @router.get("/search")
 async def search_datasets(
-    q: str = Query(..., min_length=1),
+    q: str = Query(..., min_length=1, max_length=100),
     limit: int = Query(default=20, le=50),
     session: Session = Depends(get_session)
 ):
     """Search datasets by keyword/tags."""
+    sanitized_q = sanitize_search_query(q)
     statement = select(Dataset).where(
-        Dataset.name.ilike(f"%{q}%") | 
-        Dataset.description.ilike(f"%{q}%") |
-        Dataset.category.ilike(f"%{q}%")
+        Dataset.name.ilike(f"%{sanitized_q}%") | 
+        Dataset.description.ilike(f"%{sanitized_q}%") |
+        Dataset.category.ilike(f"%{sanitized_q}%")
     ).limit(limit)
     
     datasets = session.exec(statement).all()
