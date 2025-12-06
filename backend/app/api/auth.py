@@ -17,9 +17,7 @@ from app.schemas.user import (
     UserCreate,
     UserResponse,
     Token,
-    UserUpdate,
-    PasswordReset,
-    UsageResponse
+    PasswordReset
 )
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -122,8 +120,9 @@ async def reset_password(
     session: Session = Depends(get_session)
 ):
     """Request password reset (placeholder - would send email in production)."""
+    # Query to verify email exists (but don't reveal this to prevent enumeration)
     statement = select(User).where(User.email == reset_data.email)
-    user = session.exec(statement).first()
+    session.exec(statement).first()
     
     # Always return success to prevent email enumeration
     return {"message": "If an account exists with this email, a reset link has been sent"}

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List
 from sqlmodel import SQLModel, Field, Column, JSON
 from enum import Enum
@@ -25,4 +25,4 @@ class PricingPlan(SQLModel, table=True):
     support: str
     is_highlighted: bool = Field(default=False)
     is_active: bool = Field(default=True)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

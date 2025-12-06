@@ -1,8 +1,7 @@
-from typing import Optional, List
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
-from pydantic import BaseModel
-from datetime import datetime
+from pydantic import BaseModel, HttpUrl, field_validator
 import secrets
 
 from app.core.database import get_session
@@ -15,8 +14,37 @@ router = APIRouter(prefix="/webhooks", tags=["Webhooks"])
 
 class WebhookCreate(BaseModel):
     """Schema for creating a webhook."""
-    url: str
+    url: HttpUrl
     events: List[str]
+    
+    @field_validator('url')
+    @classmethod
+    def validate_url(cls, v: HttpUrl) -> str:
+        import ipaddress
+        from urllib.parse import urlparse
+        
+        url_str = str(v)
+        parsed = urlparse(url_str)
+        hostname = parsed.hostname or ''
+        
+        # Block common internal hostnames
+        blocked_hostnames = ['localhost', 'host.docker.internal']
+        if hostname.lower() in blocked_hostnames:
+            raise ValueError('Webhook URL cannot point to internal addresses')
+        
+        # Check if hostname is an IP address and validate it's not private
+        try:
+            ip = ipaddress.ip_address(hostname)
+            if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
+                raise ValueError('Webhook URL cannot point to private or reserved IP addresses')
+        except ValueError as e:
+            # Re-raise if it's our error message about private IPs
+            if 'private' in str(e).lower() or 'reserved' in str(e).lower():
+                raise
+            # Otherwise it's not an IP address, just a hostname - allow it
+            pass
+        
+        return url_str
 
 
 @router.post("")

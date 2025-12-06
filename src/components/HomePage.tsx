@@ -18,7 +18,6 @@ export function HomePage() {
   const [platformFilter, setPlatformFilter] = useState<string>('all')
   const [selectedDataset, setSelectedDataset] = useState<Dataset | null>(null)
   const [datasets, setDatasets] = useState<Dataset[]>(mockDatasets)
-  const [loading, setLoading] = useState(true)
   const { isAuthenticated, user } = useAuth()
 
   // Fetch datasets from API on mount
@@ -47,8 +46,6 @@ export function HomePage() {
         // Use mock data as fallback if API is unavailable
         // This is expected during development or if backend isn't running
         console.info('Using local dataset cache - backend connection:', error instanceof Error ? error.message : 'unavailable')
-      } finally {
-        setLoading(false)
       }
     }
     fetchDatasets()

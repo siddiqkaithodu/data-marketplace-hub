@@ -1,6 +1,6 @@
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlmodel import Session, select
+from sqlmodel import Session, select, func
 
 from app.core.database import get_session
 from app.core.security import get_current_user
@@ -14,7 +14,7 @@ from app.schemas.dataset import (
     ExportResponse
 )
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 
 router = APIRouter(prefix="/datasets", tags=["Datasets"])
 
@@ -26,6 +26,22 @@ def sanitize_search_query(query: str) -> str:
     # Escape SQL LIKE special characters
     query = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
     return query
+
+
+def apply_dataset_filters(statement, platform, category, is_premium, sanitized_search):
+    """Apply common filters to a dataset query statement."""
+    if platform:
+        statement = statement.where(Dataset.platform == platform)
+    if category:
+        statement = statement.where(Dataset.category == category)
+    if is_premium is not None:
+        statement = statement.where(Dataset.is_premium == is_premium)
+    if sanitized_search:
+        # SQLAlchemy automatically parameterizes the LIKE pattern, preventing SQL injection
+        statement = statement.where(
+            Dataset.name.ilike(f"%{sanitized_search}%") | Dataset.description.ilike(f"%{sanitized_search}%")
+        )
+    return statement
 
 
 @router.get("", response_model=DatasetListResponse)
@@ -42,34 +58,12 @@ async def list_datasets(
     # Sanitize search query once at the start
     sanitized_search = sanitize_search_query(search) if search else None
     
-    statement = select(Dataset)
+    # Build query for datasets with filters
+    statement = apply_dataset_filters(select(Dataset), platform, category, is_premium, sanitized_search)
     
-    # Apply filters
-    if platform:
-        statement = statement.where(Dataset.platform == platform)
-    if category:
-        statement = statement.where(Dataset.category == category)
-    if is_premium is not None:
-        statement = statement.where(Dataset.is_premium == is_premium)
-    if sanitized_search:
-        statement = statement.where(
-            Dataset.name.ilike(f"%{sanitized_search}%") | Dataset.description.ilike(f"%{sanitized_search}%")
-        )
-    
-    # Get total count
-    total_statement = select(Dataset)
-    if platform:
-        total_statement = total_statement.where(Dataset.platform == platform)
-    if category:
-        total_statement = total_statement.where(Dataset.category == category)
-    if is_premium is not None:
-        total_statement = total_statement.where(Dataset.is_premium == is_premium)
-    if sanitized_search:
-        total_statement = total_statement.where(
-            Dataset.name.ilike(f"%{sanitized_search}%") | Dataset.description.ilike(f"%{sanitized_search}%")
-        )
-    
-    total = len(session.exec(total_statement).all())
+    # Get total count efficiently using COUNT
+    count_statement = apply_dataset_filters(select(func.count()), platform, category, is_premium, sanitized_search).select_from(Dataset)
+    total = session.exec(count_statement).one()
     
     # Apply pagination
     statement = statement.offset(offset).limit(limit)
@@ -171,7 +165,7 @@ async def download_dataset(
     
     # Generate download token
     download_token = secrets.token_urlsafe(32)
-    expires_at = datetime.utcnow() + timedelta(hours=24)
+    expires_at = datetime.now(timezone.utc) + timedelta(hours=24)
     
     return {
         "download_url": f"/api/v1/downloads/{download_token}",
@@ -235,7 +229,7 @@ async def export_dataset(
     
     # Generate export
     export_id = f"exp_{secrets.token_urlsafe(16)}"
-    expires_at = datetime.utcnow() + timedelta(hours=24)
+    expires_at = datetime.now(timezone.utc) + timedelta(hours=24)
     
     return ExportResponse(
         export_id=export_id,

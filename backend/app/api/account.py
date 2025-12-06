@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
-from datetime import datetime
+from datetime import datetime, timezone
 
 from app.core.database import get_session
 from app.core.security import get_current_user, generate_api_key
@@ -46,7 +46,7 @@ async def update_account(
             )
         current_user.email = update_data.email
     
-    current_user.updated_at = datetime.utcnow()
+    current_user.updated_at = datetime.now(timezone.utc)
     session.add(current_user)
     session.commit()
     session.refresh(current_user)
@@ -99,7 +99,7 @@ async def regenerate_api_key(
     """Generate a new API key."""
     new_api_key = generate_api_key()
     current_user.api_key = new_api_key
-    current_user.updated_at = datetime.utcnow()
+    current_user.updated_at = datetime.now(timezone.utc)
     session.add(current_user)
     session.commit()
     
@@ -187,7 +187,7 @@ async def subscribe(
     
     # In production, this would integrate with payment processor
     current_user.plan = PlanType(plan_id)
-    current_user.updated_at = datetime.utcnow()
+    current_user.updated_at = datetime.now(timezone.utc)
     session.add(current_user)
     session.commit()
     
@@ -210,7 +210,7 @@ async def update_subscription(
     
     old_plan = current_user.plan
     current_user.plan = PlanType(plan_id)
-    current_user.updated_at = datetime.utcnow()
+    current_user.updated_at = datetime.now(timezone.utc)
     session.add(current_user)
     session.commit()
     
@@ -225,7 +225,7 @@ async def cancel_subscription(
     """Cancel subscription (downgrade to free)."""
     old_plan = current_user.plan
     current_user.plan = PlanType.FREE
-    current_user.updated_at = datetime.utcnow()
+    current_user.updated_at = datetime.now(timezone.utc)
     session.add(current_user)
     session.commit()
     

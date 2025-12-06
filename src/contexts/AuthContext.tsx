@@ -1,4 +1,4 @@
-import { createContext, useContext, ReactNode, useEffect, useState } from 'react'
+import { createContext, useContext, ReactNode, useEffect, useState, useCallback } from 'react'
 import { User } from '@/types'
 import * as api from '@/lib/api'
 
@@ -18,7 +18,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  const fetchUserData = async () => {
+  const fetchUserData = useCallback(async () => {
     const userData = await api.getCurrentUser()
     setUser({
       id: String(userData.id),
@@ -28,7 +28,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       apiKey: userData.api_key || undefined,
       createdAt: userData.created_at
     })
-  }
+  }, [])
 
   // Check for existing token on mount
   useEffect(() => {

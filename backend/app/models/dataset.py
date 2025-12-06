@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List
 from sqlmodel import SQLModel, Field, Column, JSON
 from enum import Enum
@@ -27,5 +27,5 @@ class Dataset(SQLModel, table=True):
     is_premium: bool = Field(default=False)
     tags: List[str] = Field(default=[], sa_column=Column(JSON))
     preview_data: List[dict] = Field(default=[], sa_column=Column(JSON))
-    last_updated: datetime = Field(default_factory=datetime.utcnow)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    last_updated: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

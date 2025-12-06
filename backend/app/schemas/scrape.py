@@ -1,14 +1,19 @@
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, HttpUrl, field_validator
 from typing import Optional, List
 from app.models.scrape_request import ScrapeStatus
 
 
 class ScrapeRequestCreate(BaseModel):
     """Schema for creating a scrape request."""
-    url: str
+    url: HttpUrl
     platform: str
     fields: Optional[List[str]] = None
     webhook: Optional[str] = None
+    
+    @field_validator('url')
+    @classmethod
+    def validate_url(cls, v: HttpUrl) -> str:
+        return str(v)
 
 
 class ScrapeRequestResponse(BaseModel):

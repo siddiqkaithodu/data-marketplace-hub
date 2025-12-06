@@ -4,15 +4,15 @@ services:
     image: postgres:16-alpine
     container_name: dataflow-db
     environment:
-      POSTGRES_USER: dataflow
-      POSTGRES_PASSWORD: dataflow
-      POSTGRES_DB: dataflow
+      POSTGRES_USER: ${POSTGRES_USER:-dataflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dataflow}
+      POSTGRES_DB: ${POSTGRES_DB:-dataflow}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U dataflow"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dataflow}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -24,10 +24,12 @@ services:
       dockerfile: Dockerfile
     container_name: dataflow-backend
     environment:
-      DATABASE_URL: postgresql://dataflow:dataflow@db:5432/dataflow
+      DATABASE_URL: postgresql://${POSTGRES_USER:-dataflow}:${POSTGRES_PASSWORD:-dataflow}@db:5432/${POSTGRES_DB:-dataflow}
       SECRET_KEY: ${SECRET_KEY:-your-super-secret-key-change-in-production}
       ALGORITHM: HS256
       ACCESS_TOKEN_EXPIRE_MINUTES: 30
+      DEBUG: ${DEBUG:-false}
+      BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:5173,http://localhost:3000}
     ports:
       - "8000:8000"
     depends_on:
@@ -51,7 +53,7 @@ services:
       - backend
     volumes:
       - .:/app
-      - /app/node_modules
+      - /app/node_modules  # Prevent node_modules from being overwritten by host mount
     command: npm run dev -- --host 0.0.0.0
 
 volumes:

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List
 from sqlmodel import SQLModel, Field, Column, JSON
 
@@ -15,4 +15,4 @@ class Webhook(SQLModel, table=True):
     events: List[str] = Field(default=[], sa_column=Column(JSON))
     is_active: bool = Field(default=True)
     secret: str
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List
 from sqlmodel import SQLModel, Field, Column, JSON
 from enum import Enum
@@ -27,5 +27,5 @@ class ScrapeRequest(SQLModel, table=True):
     result_data: Optional[dict] = Field(default=None, sa_column=Column(JSON))
     result_count: int = Field(default=0)
     error_message: Optional[str] = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     completed_at: Optional[datetime] = None

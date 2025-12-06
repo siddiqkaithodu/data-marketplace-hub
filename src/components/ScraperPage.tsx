@@ -74,7 +74,10 @@ export function ScraperPage() {
 
       setScrapeRequests((current) => [newRequest, ...current])
 
-      // Poll for status updates
+      // Poll for status updates with retry limit
+      let retryCount = 0
+      const maxRetries = 10
+      
       const pollStatus = async () => {
         try {
           const status = await api.getScrapeStatus(response.request_id)
@@ -105,9 +108,15 @@ export function ScraperPage() {
             toast.error(status.error_message || 'Scraping failed')
           }
         } catch (error) {
-          // Log polling error and retry with exponential backoff
+          // Log polling error and retry with limit
           console.warn('Status poll failed:', error instanceof Error ? error.message : 'unknown error')
-          setTimeout(pollStatus, 3000) // Increased delay on error
+          retryCount++
+          if (retryCount < maxRetries) {
+            setTimeout(pollStatus, 3000) // Increased delay on error
+          } else {
+            setProcessing(false)
+            toast.error('Failed to get scrape status. Please check your scrape history.')
+          }
         }
       }
 

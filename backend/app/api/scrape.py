@@ -1,10 +1,9 @@
-from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks
-from sqlmodel import Session, select
+from sqlmodel import Session, select, func
 import secrets
-from datetime import datetime
+from datetime import datetime, timezone
 
-from app.core.database import get_session
+from app.core.database import get_session, engine
 from app.core.security import get_current_user
 from app.models.user import User
 from app.models.scrape_request import ScrapeRequest, ScrapeStatus
@@ -18,23 +17,24 @@ from app.schemas.scrape import (
 router = APIRouter(prefix="/scrape", tags=["Scraping"])
 
 
-def process_scrape_request(request_id: str, session: Session):
+def process_scrape_request(request_id: str):
     """Background task to process scraping (placeholder)."""
-    # In production, this would trigger actual scraping logic
-    statement = select(ScrapeRequest).where(ScrapeRequest.request_id == request_id)
-    scrape_request = session.exec(statement).first()
-    
-    if scrape_request:
-        scrape_request.status = ScrapeStatus.COMPLETED
-        scrape_request.completed_at = datetime.utcnow()
-        scrape_request.result_count = 1
-        scrape_request.result_data = {
-            "scraped": True,
-            "url": scrape_request.url,
-            "data": {"sample": "Scraped data would appear here"}
-        }
-        session.add(scrape_request)
-        session.commit()
+    # Create a new session within the background task
+    with Session(engine) as session:
+        statement = select(ScrapeRequest).where(ScrapeRequest.request_id == request_id)
+        scrape_request = session.exec(statement).first()
+        
+        if scrape_request:
+            scrape_request.status = ScrapeStatus.COMPLETED
+            scrape_request.completed_at = datetime.now(timezone.utc)
+            scrape_request.result_count = 1
+            scrape_request.result_data = {
+                "scraped": True,
+                "url": scrape_request.url,
+                "data": {"sample": "Scraped data would appear here"}
+            }
+            session.add(scrape_request)
+            session.commit()
 
 
 @router.post("", response_model=ScrapeStatusResponse, status_code=status.HTTP_201_CREATED)
@@ -76,8 +76,8 @@ async def submit_scrape_request(
     session.refresh(scrape_request)
     
     # In production, this would trigger actual scraping
-    # For now, simulate with a background task
-    background_tasks.add_task(process_scrape_request, request_id, session)
+    # For now, simulate with a background task (uses its own session)
+    background_tasks.add_task(process_scrape_request, request_id)
     
     return ScrapeStatusResponse(
         request_id=request_id,
@@ -160,9 +160,9 @@ async def get_scrape_history(
     
     requests = session.exec(statement).all()
     
-    # Get total count
-    total_statement = select(ScrapeRequest).where(ScrapeRequest.user_id == current_user.id)
-    total = len(session.exec(total_statement).all())
+    # Get total count efficiently using COUNT
+    total_statement = select(func.count()).select_from(ScrapeRequest).where(ScrapeRequest.user_id == current_user.id)
+    total = session.exec(total_statement).one()
     
     return ScrapeHistoryResponse(
         requests=[
