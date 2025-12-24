@@ -27,20 +27,31 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Configure CORS - Allow all origins for development
-# WARNING: This is permissive for local development only
-# For production, replace ["*"] with specific domain origins
-logger.info("Configuring CORS to allow all origins for development")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,  # Must be False when allow_origins is ["*"]
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["*"],
-    max_age=3600,
-)
+# Configure CORS based on environment
+# In development: Allow all origins for ease of testing
+# In production: Use specific origins from configuration
+if settings.environment == "development":
+    logger.info("Development mode: Configuring CORS to allow all origins")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=False,  # Must be False when allow_origins is ["*"]
+        allow_methods=["*"],
+        allow_headers=["*"],
+        expose_headers=["*"],
+        max_age=3600,
+    )
+else:
+    logger.info(f"Production mode: Configuring CORS with specific origins: {settings.backend_cors_origins}")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.backend_cors_origins,
+        allow_credentials=False,  # False since we use JWT in Authorization headers
+        allow_methods=["*"],
+        allow_headers=["*"],
+        expose_headers=["*"],
+        max_age=3600,
+    )
 
 # Include routers
 app.include_router(auth.router, prefix=settings.api_v1_prefix)

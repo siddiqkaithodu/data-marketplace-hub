@@ -26,6 +26,12 @@ class Settings(BaseSettings):
     # Debug mode - controls SQL logging
     debug: bool = False
     
+    # Environment - defaults to development
+    environment: str = Field(
+        default="development",
+        description="Application environment: 'development' or 'production'"
+    )
+    
     # CORS - accepts comma-separated origins from environment variable
     backend_cors_origins: Union[List[str], str] = Field(
         default=DEFAULT_CORS_ORIGINS,
