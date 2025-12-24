@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,15 +10,39 @@ import { toast } from 'sonner'
 import { ScrapeRequest } from '@/types'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { useKV } from '@github/spark/hooks'
+import * as api from '@/lib/api'
 
 export function ScraperPage() {
   const { isAuthenticated, user } = useAuth()
   const [url, setUrl] = useState('')
   const [platform, setPlatform] = useState('')
   const [processing, setProcessing] = useState(false)
-  const [scrapeRequests, setScrapeRequests] = useKV<ScrapeRequest[]>('scrape-requests', [])
+  const [scrapeRequests, setScrapeRequests] = useState<ScrapeRequest[]>([])
   const [progress, setProgress] = useState(0)
+
+  // Fetch scrape history on mount
+  useEffect(() => {
+    const fetchHistory = async () => {
+      if (!isAuthenticated) return
+      try {
+        const response = await api.getScrapeHistory()
+        const transformedRequests: ScrapeRequest[] = response.requests.map(r => ({
+          id: r.request_id,
+          url: r.url,
+          platform: r.platform,
+          status: r.status,
+          createdAt: r.created_at,
+          completedAt: r.completed_at,
+          resultCount: r.result_count
+        }))
+        setScrapeRequests(transformedRequests)
+      } catch (error) {
+        // API unavailable - scrape history will load when user makes new requests
+        console.info('Scrape history unavailable:', error instanceof Error ? error.message : 'backend not connected')
+      }
+    }
+    fetchHistory()
+  }, [isAuthenticated])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -36,59 +60,74 @@ export function ScraperPage() {
     setProcessing(true)
     setProgress(0)
 
-    const newRequest: ScrapeRequest = {
-      id: `req_${Date.now()}`,
-      url,
-      platform,
-      status: 'pending',
-      createdAt: new Date().toISOString()
-    }
+    try {
+      // Submit to real API
+      const response = await api.submitScrapeRequest({ url, platform })
+      
+      const newRequest: ScrapeRequest = {
+        id: response.request_id,
+        url,
+        platform,
+        status: response.status,
+        createdAt: new Date().toISOString()
+      }
 
-    setScrapeRequests((current) => [newRequest, ...(current || [])])
+      setScrapeRequests((current) => [newRequest, ...current])
 
-    const progressInterval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 90) {
-          clearInterval(progressInterval)
-          return 90
+      // Poll for status updates with retry limit
+      let retryCount = 0
+      const maxRetries = 10
+      
+      const pollStatus = async () => {
+        try {
+          const status = await api.getScrapeStatus(response.request_id)
+          
+          setScrapeRequests((current) =>
+            current.map((req) =>
+              req.id === response.request_id
+                ? {
+                    ...req,
+                    status: status.status,
+                    resultCount: status.record_count,
+                    completedAt: status.status === 'completed' ? new Date().toISOString() : undefined
+                  }
+                : req
+            )
+          )
+
+          if (status.status === 'processing') {
+            setProgress((prev) => Math.min(prev + 15, 90))
+            setTimeout(pollStatus, 1500)
+          } else if (status.status === 'completed') {
+            setProgress(100)
+            setProcessing(false)
+            setUrl('')
+            toast.success('Scraping completed successfully!')
+          } else if (status.status === 'failed') {
+            setProcessing(false)
+            toast.error(status.error_message || 'Scraping failed')
+          }
+        } catch (error) {
+          // Log polling error and retry with limit
+          console.warn('Status poll failed:', error instanceof Error ? error.message : 'unknown error')
+          retryCount++
+          if (retryCount < maxRetries) {
+            setTimeout(pollStatus, 3000) // Increased delay on error
+          } else {
+            setProcessing(false)
+            toast.error('Failed to get scrape status. Please check your scrape history.')
+          }
         }
-        return prev + 10
-      })
-    }, 300)
+      }
 
-    setTimeout(() => {
-      setScrapeRequests((current) =>
-        (current || []).map((req) =>
-          req.id === newRequest.id
-            ? {
-                ...req,
-                status: 'processing'
-              }
-            : req
-        )
-      )
-    }, 1000)
+      // Start polling after a short delay
+      setTimeout(pollStatus, 1000)
+      setProgress(10)
 
-    setTimeout(() => {
-      clearInterval(progressInterval)
-      setProgress(100)
-      setScrapeRequests((current) =>
-        (current || []).map((req) =>
-          req.id === newRequest.id
-            ? {
-                ...req,
-                status: 'completed',
-                completedAt: new Date().toISOString(),
-                resultCount: Math.floor(Math.random() * 500) + 100
-              }
-            : req
-        )
-      )
+    } catch (error) {
       setProcessing(false)
-      setProgress(0)
-      setUrl('')
-      toast.success('Scraping completed successfully!')
-    }, 4000)
+      toast.error(error instanceof Error ? error.message : 'Failed to submit scraping request')
+    }
   }
 
   const getStatusIcon = (status: string) => {
@@ -210,10 +249,10 @@ export function ScraperPage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold">Recent Requests</h2>
-              <Badge variant="secondary">{(scrapeRequests || []).length} total</Badge>
+              <Badge variant="secondary">{scrapeRequests.length} total</Badge>
             </div>
 
-            {(scrapeRequests || []).length === 0 ? (
+            {scrapeRequests.length === 0 ? (
               <Card>
                 <CardContent className="py-12 text-center">
                   <Lightning size={48} className="mx-auto mb-4 text-muted-foreground" />
@@ -224,7 +263,7 @@ export function ScraperPage() {
               </Card>
             ) : (
               <div className="space-y-3">
-                {(scrapeRequests || []).slice(0, 10).map((request) => (
+                {scrapeRequests.slice(0, 10).map((request) => (
                   <Card key={request.id}>
                     <CardContent className="p-4">
                       <div className="flex items-start gap-3">

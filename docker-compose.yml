@@ -1,0 +1,60 @@
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:16-alpine
+    container_name: dataflow-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-dataflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dataflow}
+      POSTGRES_DB: ${POSTGRES_DB:-dataflow}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dataflow}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: dataflow-backend
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-dataflow}:${POSTGRES_PASSWORD:-dataflow}@db:5432/${POSTGRES_DB:-dataflow}
+      SECRET_KEY: ${SECRET_KEY:-your-super-secret-key-change-in-production}
+      ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: 30
+      DEBUG: ${DEBUG:-false}
+      BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:5173,http://localhost:3000}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # React Frontend
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dataflow-frontend
+    environment:
+      VITE_API_BASE_URL: http://localhost:8000
+    ports:
+      - "5173:5000"
+    depends_on:
+      - backend
+    volumes:
+      - .:/app
+      - /app/node_modules  # Prevent node_modules from being overwritten by host mount
+    command: npm run dev -- --host 0.0.0.0
+
+volumes:
+  postgres_data:

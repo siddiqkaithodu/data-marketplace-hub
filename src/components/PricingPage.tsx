@@ -5,21 +5,35 @@ import { CheckCircle, Sparkle } from '@phosphor-icons/react'
 import { pricingPlans } from '@/lib/data'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
+import * as api from '@/lib/api'
+import { useState } from 'react'
 
 interface PricingPageProps {
   onAuthClick: (mode: 'signin' | 'signup') => void
 }
 
 export function PricingPage({ onAuthClick }: PricingPageProps) {
-  const { isAuthenticated, user } = useAuth()
+  const { isAuthenticated, user, refreshUser } = useAuth()
+  const [subscribing, setSubscribing] = useState<string | null>(null)
 
-  const handleSelectPlan = (planId: string) => {
+  const handleSelectPlan = async (planId: string) => {
     if (!isAuthenticated) {
       toast.error('Please sign in to select a plan')
       onAuthClick('signup')
       return
     }
-    toast.success(`Successfully subscribed to ${planId} plan!`)
+
+    setSubscribing(planId)
+    try {
+      const response = await api.subscribeToPlan(planId)
+      toast.success(response.message)
+      // Refresh user data to reflect new plan
+      await refreshUser()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Subscription failed. Please try again or contact support if the issue persists.')
+    } finally {
+      setSubscribing(null)
+    }
   }
 
   return (
@@ -94,9 +108,11 @@ export function PricingPage({ onAuthClick }: PricingPageProps) {
                   }`}
                   variant={plan.highlighted ? 'default' : 'outline'}
                   onClick={() => handleSelectPlan(plan.id)}
-                  disabled={isAuthenticated && user?.plan === plan.id}
+                  disabled={(isAuthenticated && user?.plan === plan.id) || subscribing === plan.id}
                 >
-                  {isAuthenticated && user?.plan === plan.id
+                  {subscribing === plan.id
+                    ? 'Subscribing...'
+                    : isAuthenticated && user?.plan === plan.id
                     ? 'Current Plan'
                     : plan.price === 0
                     ? 'Get Started'

@@ -1,0 +1,58 @@
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.core.config import settings
+from app.core.database import create_db_and_tables
+from app.api import auth, datasets, scrape, account, webhooks
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan events."""
+    # Startup
+    create_db_and_tables()
+    yield
+    # Shutdown
+
+
+app = FastAPI(
+    title=settings.project_name,
+    openapi_url=f"{settings.api_v1_prefix}/openapi.json",
+    docs_url=f"{settings.api_v1_prefix}/docs",
+    redoc_url=f"{settings.api_v1_prefix}/redoc",
+    lifespan=lifespan
+)
+
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.backend_cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Include routers
+app.include_router(auth.router, prefix=settings.api_v1_prefix)
+app.include_router(datasets.router, prefix=settings.api_v1_prefix)
+app.include_router(scrape.router, prefix=settings.api_v1_prefix)
+app.include_router(account.router, prefix=settings.api_v1_prefix)
+app.include_router(account.billing_router, prefix=settings.api_v1_prefix)
+app.include_router(webhooks.router, prefix=settings.api_v1_prefix)
+
+
+@app.get("/")
+async def root():
+    """Root endpoint."""
+    return {
+        "name": settings.project_name,
+        "version": "1.0.0",
+        "docs": f"{settings.api_v1_prefix}/docs"
+    }
+
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint."""
+    return {"status": "healthy"}

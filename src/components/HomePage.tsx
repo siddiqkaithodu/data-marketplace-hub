@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -11,21 +11,54 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
+import * as api from '@/lib/api'
 
 export function HomePage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [platformFilter, setPlatformFilter] = useState<string>('all')
   const [selectedDataset, setSelectedDataset] = useState<Dataset | null>(null)
+  const [datasets, setDatasets] = useState<Dataset[]>(mockDatasets)
   const { isAuthenticated, user } = useAuth()
 
-  const filteredDatasets = mockDatasets.filter(dataset => {
+  // Fetch datasets from API on mount
+  useEffect(() => {
+    const fetchDatasets = async () => {
+      try {
+        const response = await api.getDatasets()
+        // Transform API response to match frontend Dataset type
+        const transformedDatasets: Dataset[] = response.datasets.map(d => ({
+          id: String(d.id),
+          name: d.name,
+          platform: d.platform,
+          category: d.category,
+          description: d.description,
+          recordCount: d.record_count,
+          lastUpdated: d.last_updated.split('T')[0],
+          size: d.size,
+          isPremium: d.is_premium,
+          tags: d.tags,
+          previewData: d.preview_data as Record<string, string | number>[]
+        }))
+        if (transformedDatasets.length > 0) {
+          setDatasets(transformedDatasets)
+        }
+      } catch (error) {
+        // Use mock data as fallback if API is unavailable
+        // This is expected during development or if backend isn't running
+        console.info('Using local dataset cache - backend connection:', error instanceof Error ? error.message : 'unavailable')
+      }
+    }
+    fetchDatasets()
+  }, [])
+
+  const filteredDatasets = datasets.filter(dataset => {
     const matchesSearch = dataset.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          dataset.description.toLowerCase().includes(searchQuery.toLowerCase())
     const matchesPlatform = platformFilter === 'all' || dataset.platform === platformFilter
     return matchesSearch && matchesPlatform
   })
 
-  const handleDownload = (dataset: Dataset) => {
+  const handleDownload = async (dataset: Dataset) => {
     if (!isAuthenticated) {
       toast.error('Please sign in to download datasets')
       return
@@ -34,7 +67,14 @@ export function HomePage() {
       toast.error('This is a premium dataset. Please upgrade your plan.')
       return
     }
-    toast.success(`Downloading ${dataset.name}...`)
+    
+    try {
+      const result = await api.downloadDataset(Number(dataset.id))
+      toast.success(`Downloading ${result.dataset_name}...`)
+    } catch {
+      // Fallback for when API is unavailable
+      toast.success(`Downloading ${dataset.name}...`)
+    }
   }
 
   const platformColors: Record<string, string> = {

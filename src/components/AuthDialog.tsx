@@ -37,7 +37,8 @@ export function AuthDialog({ open, onOpenChange, mode: initialMode }: AuthDialog
       setPassword('')
       setName('')
     } catch (error) {
-      toast.error('Authentication failed. Please try again.')
+      const errorMessage = error instanceof Error ? error.message : 'Authentication failed'
+      toast.error(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -93,8 +94,13 @@ export function AuthDialog({ open, onOpenChange, mode: initialMode }: AuthDialog
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              minLength={6}
+              minLength={8}
             />
+            {mode === 'signup' && (
+              <p className="text-xs text-muted-foreground">
+                Must be 8+ characters with uppercase, lowercase, and number
+              </p>
+            )}
           </div>
 
           <Button 
