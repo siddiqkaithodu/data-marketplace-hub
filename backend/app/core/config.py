@@ -5,7 +5,7 @@ from typing import List, Union
 
 
 # Default CORS origins
-DEFAULT_CORS_ORIGINS = "http://localhost:5173,http://localhost:3000"
+DEFAULT_CORS_ORIGINS = "http://localhost:5173,http://localhost:5000,http://localhost:3000"
 
 
 class Settings(BaseSettings):
