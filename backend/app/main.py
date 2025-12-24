@@ -27,16 +27,15 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Configure CORS
-# Use regex pattern for flexible localhost/127.0.0.1 matching in development
-# This allows any port on localhost or 127.0.0.1
-cors_regex_pattern = r"https?://(localhost|127\.0\.0\.1)(:\d+)?"
-logger.info(f"Configuring CORS with regex pattern: {cors_regex_pattern}")
+# Configure CORS - Allow all origins for development
+# WARNING: This is permissive for local development only
+# In production, configure specific origins via BACKEND_CORS_ORIGINS environment variable
+logger.info("Configuring CORS to allow all origins for development")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origin_regex=cors_regex_pattern,
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,  # Must be False when allow_origins is ["*"]
     allow_methods=["*"],
     allow_headers=["*"],
     expose_headers=["*"],
