@@ -32,6 +32,23 @@ class Settings(BaseSettings):
         description="Application environment: 'development' or 'production'"
     )
     
+    @field_validator("environment", mode="before")
+    @classmethod
+    def validate_environment(cls, v: str) -> str:
+        """
+        Ensure that the environment is one of the allowed values.
+        
+        Normalizes input by stripping whitespace and lowercasing before validation.
+        """
+        allowed_environments = {"development", "production"}
+        if isinstance(v, str):
+            normalized = v.strip().lower()
+            if normalized in allowed_environments:
+                return normalized
+        raise ValueError(
+            f"Invalid environment value '{v}'. Allowed values are: 'development', 'production'."
+        )
+    
     # CORS - accepts comma-separated origins from environment variable
     backend_cors_origins: Union[List[str], str] = Field(
         default=DEFAULT_CORS_ORIGINS,

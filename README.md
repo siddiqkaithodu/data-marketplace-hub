@@ -243,9 +243,15 @@ SECRET_KEY=your-super-secret-key-change-in-production
 DEBUG=false
 
 # CORS Origins - comma-separated list of allowed origins
-# In development (ENVIRONMENT=development): All origins are allowed automatically
-# In production (ENVIRONMENT=production): Only these specific origins are allowed
-BACKEND_CORS_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
+# NOTE: In development mode, BACKEND_CORS_ORIGINS is IGNORED and all origins are allowed.
+# This setting is ONLY used when ENVIRONMENT=production.
+# 
+# For development (ENVIRONMENT=development):
+#   - Keep these localhost URLs (they won't be used, but serve as examples)
+# For production (ENVIRONMENT=production):
+#   - Change these to your actual production domains
+BACKEND_CORS_ORIGINS=http://localhost:5173,http://localhost:5000,http://localhost:3000
+# Production example: BACKEND_CORS_ORIGINS=https://yourdomain.com,https://api.yourdomain.com
 ```
 
 **CORS Configuration**:
