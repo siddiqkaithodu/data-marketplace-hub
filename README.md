@@ -223,16 +223,29 @@ All API endpoints are implemented in the FastAPI backend:
 
 ## 🔐 Environment Variables
 
-### Backend (.env)
+### Backend Configuration
+
+Create a `.env` file in the project root (see `.env.example` for reference):
 
 ```env
-DATABASE_URL=postgresql://dataflow:dataflow@db:5432/dataflow
+# Database Configuration
+POSTGRES_USER=dataflow
+POSTGRES_PASSWORD=your-secure-database-password
+POSTGRES_DB=dataflow
+
+# JWT Secret Key - Generate with: python -c "import secrets; print(secrets.token_urlsafe(32))"
 SECRET_KEY=your-super-secret-key-change-in-production
-ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=30
+
+# Debug mode - set to true to enable SQL logging
+DEBUG=false
+
+# CORS Origins - comma-separated list of allowed origins
+BACKEND_CORS_ORIGINS=http://localhost:5173,http://localhost:3000
 ```
 
-### Frontend
+**Note**: The `BACKEND_CORS_ORIGINS` accepts a comma-separated list of allowed origins. The validator will automatically parse this string into a list for the FastAPI CORS middleware.
+
+### Frontend Configuration
 
 ```env
 VITE_API_BASE_URL=http://localhost:8000

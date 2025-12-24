@@ -1,7 +1,7 @@
 from pydantic_settings import BaseSettings
-from pydantic import field_validator
+from pydantic import field_validator, Field
 from functools import lru_cache
-from typing import List
+from typing import List, Union
 
 
 class Settings(BaseSettings):
@@ -23,15 +23,19 @@ class Settings(BaseSettings):
     debug: bool = False
     
     # CORS - accepts comma-separated origins from environment variable
-    backend_cors_origins: List[str] = ["http://localhost:5173", "http://localhost:3000"]
+    backend_cors_origins: Union[List[str], str] = Field(
+        default="http://localhost:5173,http://localhost:3000"
+    )
     
     @field_validator("backend_cors_origins", mode="before")
     @classmethod
-    def assemble_cors_origins(cls, v):
+    def assemble_cors_origins(cls, v) -> List[str]:
         if isinstance(v, str):
             # Accept comma-separated origins in env var
             return [i.strip() for i in v.split(",") if i.strip()]
-        return v
+        elif isinstance(v, list):
+            return v
+        return ["http://localhost:5173", "http://localhost:3000"]
     
     class Config:
         env_file = ".env"
