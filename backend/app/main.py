@@ -28,6 +28,7 @@ app = FastAPI(
 )
 
 # Configure CORS based on environment
+# Note: allow_credentials is False since we use JWT in Authorization headers (not cookies)
 # In development: Allow all origins for ease of testing
 # In production: Use specific origins from configuration
 if settings.environment == "development":
@@ -35,7 +36,7 @@ if settings.environment == "development":
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
-        allow_credentials=False,  # Must be False when allow_origins is ["*"]
+        allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],
         expose_headers=["*"],
@@ -46,7 +47,7 @@ else:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.backend_cors_origins,
-        allow_credentials=False,  # False since we use JWT in Authorization headers
+        allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],
         expose_headers=["*"],
