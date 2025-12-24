@@ -28,7 +28,8 @@ class Settings(BaseSettings):
     
     # CORS - accepts comma-separated origins from environment variable
     backend_cors_origins: Union[List[str], str] = Field(
-        default=DEFAULT_CORS_ORIGINS
+        default=DEFAULT_CORS_ORIGINS,
+        description="Allowed CORS origins. Accepts comma-separated string (e.g., 'http://localhost:5173,http://localhost:3000') or list of strings."
     )
     
     @field_validator("backend_cors_origins", mode="before")
@@ -39,7 +40,12 @@ class Settings(BaseSettings):
             return [i.strip() for i in v.split(",") if i.strip()]
         elif isinstance(v, list):
             # Validate and normalize list items
-            return [str(i).strip() for i in v if str(i).strip()]
+            normalized = []
+            for item in v:
+                stripped = str(item).strip()
+                if stripped:
+                    normalized.append(stripped)
+            return normalized
         # Fallback to default if invalid type
         return [i.strip() for i in DEFAULT_CORS_ORIGINS.split(",") if i.strip()]
     
