@@ -243,7 +243,11 @@ DEBUG=false
 BACKEND_CORS_ORIGINS=http://localhost:5173,http://localhost:3000
 ```
 
-**Note**: The `BACKEND_CORS_ORIGINS` accepts a comma-separated list of allowed origins. The validator will automatically parse this string into a list for the FastAPI CORS middleware.
+**Note**: The `BACKEND_CORS_ORIGINS` accepts either:
+- A comma-separated string of allowed origins (recommended for environment variables): `"http://localhost:5173,http://localhost:3000"`
+- A list of strings (for programmatic configuration): `["http://localhost:5173", "http://localhost:3000"]`
+
+The validator automatically normalizes the input by stripping whitespace and filtering empty values.
 
 ### Frontend Configuration
 
