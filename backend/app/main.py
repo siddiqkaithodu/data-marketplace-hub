@@ -1,10 +1,13 @@
 from contextlib import asynccontextmanager
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.core.database import create_db_and_tables
 from app.api import auth, datasets, scrape, account, webhooks
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -25,12 +28,18 @@ app = FastAPI(
 )
 
 # Configure CORS
+logger.info(f"Configuring CORS with origins: {settings.backend_cors_origins}")
+
+# Use regex pattern for flexible localhost/127.0.0.1 matching in development
+# This allows any port on localhost or 127.0.0.1
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.backend_cors_origins,
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=3600,
 )
 
 # Include routers
