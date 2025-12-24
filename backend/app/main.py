@@ -31,28 +31,16 @@ app = FastAPI(
 # Note: allow_credentials is False since we use JWT in Authorization headers (not cookies)
 # In development: Allow all origins for ease of testing
 # In production: Use specific origins from configuration
-if settings.environment == "development":
-    logger.info("Development mode: Configuring CORS to allow all origins")
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=False,
-        allow_methods=["*"],
-        allow_headers=["*"],
-        expose_headers=["*"],
-        max_age=3600,
-    )
-else:
-    logger.info(f"Production mode: Configuring CORS with specific origins: {settings.backend_cors_origins}")
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=settings.backend_cors_origins,
-        allow_credentials=False,
-        allow_methods=["*"],
-        allow_headers=["*"],
-        expose_headers=["*"],
-        max_age=3600,
-    )
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.backend_cors_origins if settings.environment == "production" else ["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=3600,
+)
 
 # Include routers
 app.include_router(auth.router, prefix=settings.api_v1_prefix)
