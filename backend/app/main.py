@@ -1,10 +1,13 @@
 from contextlib import asynccontextmanager
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.core.database import create_db_and_tables
 from app.api import auth, datasets, scrape, account, webhooks
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -24,13 +27,19 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Configure CORS
+# Configure CORS based on environment
+# Note: allow_credentials is False since we use JWT in Authorization headers (not cookies)
+# In development: Allow all origins for ease of testing
+# In production: Use specific origins from configuration
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.backend_cors_origins,
-    allow_credentials=True,
+    allow_origins=settings.backend_cors_origins if settings.environment.lower() == "production" else ["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=3600,
 )
 
 # Include routers

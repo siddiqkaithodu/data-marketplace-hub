@@ -35,15 +35,14 @@ class WebhookCreate(BaseModel):
         # Check if hostname is an IP address and validate it's not private
         try:
             ip = ipaddress.ip_address(hostname)
-            if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
+            invalid_conditions = [ip.is_private, ip.is_loopback, ip.is_link_local, ip.is_reserved]
+            if any(invalid_conditions):
                 raise ValueError('Webhook URL cannot point to private or reserved IP addresses')
         except ValueError as e:
             # Re-raise if it's our error message about private IPs
             if 'private' in str(e).lower() or 'reserved' in str(e).lower():
                 raise
             # Otherwise it's not an IP address, just a hostname - allow it
-            pass
-        
         return url_str
 
 

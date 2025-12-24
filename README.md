@@ -228,6 +228,9 @@ All API endpoints are implemented in the FastAPI backend:
 Create a `.env` file in the project root (see `.env.example` for reference):
 
 ```env
+# Environment - set to "production" for production deployment
+ENVIRONMENT=development
+
 # Database Configuration
 POSTGRES_USER=dataflow
 POSTGRES_PASSWORD=your-secure-database-password
@@ -240,14 +243,22 @@ SECRET_KEY=your-super-secret-key-change-in-production
 DEBUG=false
 
 # CORS Origins - comma-separated list of allowed origins
-BACKEND_CORS_ORIGINS=http://localhost:5173,http://localhost:3000
+# NOTE: In development mode, BACKEND_CORS_ORIGINS is IGNORED and all origins are allowed.
+# This setting is ONLY used when ENVIRONMENT=production.
+# 
+# For development (ENVIRONMENT=development):
+#   - Keep these localhost URLs (they won't be used, but serve as examples)
+# For production (ENVIRONMENT=production):
+#   - Change these to your actual production domains
+BACKEND_CORS_ORIGINS=http://localhost:5173,http://localhost:5000,http://localhost:3000
+# Production example: BACKEND_CORS_ORIGINS=https://yourdomain.com,https://api.yourdomain.com
 ```
 
-**Note**: The `BACKEND_CORS_ORIGINS` accepts either:
-- A comma-separated string of allowed origins (recommended for environment variables): `"http://localhost:5173,http://localhost:3000"`
-- A list of strings (for programmatic configuration): `["http://localhost:5173", "http://localhost:3000"]`
-
-The validator automatically normalizes the input by stripping whitespace and filtering empty values.
+**CORS Configuration**:
+- **Development mode** (`ENVIRONMENT=development`): Allows all origins (`["*"]`) for easy local testing
+- **Production mode** (`ENVIRONMENT=production`): Only allows specific origins from `BACKEND_CORS_ORIGINS`
+- The validator automatically normalizes the input by stripping whitespace and filtering empty values
+- `allow_credentials` is set to `False` since the app uses JWT tokens in Authorization headers (not cookies)
 
 ### Frontend Configuration
 
