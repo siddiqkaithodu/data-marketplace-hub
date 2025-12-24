@@ -29,7 +29,7 @@ app = FastAPI(
 
 # Configure CORS - Allow all origins for development
 # WARNING: This is permissive for local development only
-# In production, configure specific origins via BACKEND_CORS_ORIGINS environment variable
+# For production, replace ["*"] with specific domain origins
 logger.info("Configuring CORS to allow all origins for development")
 
 app.add_middleware(
