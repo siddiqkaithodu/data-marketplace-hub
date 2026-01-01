@@ -12,6 +12,29 @@ interface AuthDialogProps {
   mode: 'signin' | 'signup'
 }
 
+function checkPasswordStrength(password: string) {
+  const errors: string[] = [];
+  if (password.length < 8) {
+    errors.push("Your password must be at least 8 characters long.");
+  }
+  if (!/[a-z]/.test(password)) {
+    errors.push("Your password must contain at least one lowercase letter.");
+  }
+  if (!/[A-Z]/.test(password)) {
+    errors.push("Your password must contain at least one uppercase letter.");
+  }
+  if (!/\d/.test(password)) {
+    errors.push("Your password must contain at least one digit.");
+  }
+  // if (!/[@$!%*?&]/.test(password)) {
+  //   errors.push("Your password must contain at least one special character.");
+  // }
+
+  if (errors.length > 0) {
+    return errors.join("\n");
+  }
+}
+
 export function AuthDialog({ open, onOpenChange, mode: initialMode }: AuthDialogProps) {
   const [mode, setMode] = useState(initialMode)
   const [email, setEmail] = useState('')
@@ -29,6 +52,10 @@ export function AuthDialog({ open, onOpenChange, mode: initialMode }: AuthDialog
         await signIn(email, password)
         toast.success('Welcome back!')
       } else {
+        const passwordError = checkPasswordStrength(password)
+        if (passwordError) {
+          throw new Error(passwordError)
+        }
         await signUp(email, password, name)
         toast.success('Account created successfully!')
       }

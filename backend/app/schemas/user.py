@@ -1,8 +1,11 @@
-from pydantic import BaseModel, EmailStr, field_validator
+from logging import getLogger
 from typing import Optional
+
+from pydantic import BaseModel, EmailStr, field_validator
+
 from app.models.user import PlanType
 
-
+logger = getLogger(__name__)
 class UserCreate(BaseModel):
     """Schema for user registration."""
     email: EmailStr
@@ -12,28 +15,32 @@ class UserCreate(BaseModel):
     @field_validator('password')
     @classmethod
     def validate_password(cls, v: str) -> str:
-        if len(v) < 8:
-            raise ValueError('Password must be at least 8 characters long')
+        try:
+            if len(v) < 8:
+                raise ValueError('Password must be at least 8 characters long')
+            
+            has_upper = has_lower = has_digit = False
+            for char in v:
+                if char.isupper():
+                    has_upper = True
+                elif char.islower():
+                    has_lower = True
+                elif char.isdigit():
+                    has_digit = True
+                if all([has_upper, has_lower, has_digit]):
+                    break
+            
+            if not has_upper:
+                raise ValueError('Password must contain at least one uppercase letter')
+            if not has_lower:
+                raise ValueError('Password must contain at least one lowercase letter')
+            if not has_digit:
+                raise ValueError('Password must contain at least one number')
+            return v
+        except ValueError as e:
+            logger.debug(f"Password validation error: {e}")
+            raise e
         
-        has_upper = has_lower = has_digit = False
-        for char in v:
-            if char.isupper():
-                has_upper = True
-            elif char.islower():
-                has_lower = True
-            elif char.isdigit():
-                has_digit = True
-            # Early exit if all conditions met
-            if has_upper and has_lower and has_digit:
-                break
-        
-        if not has_upper:
-            raise ValueError('Password must contain at least one uppercase letter')
-        if not has_lower:
-            raise ValueError('Password must contain at least one lowercase letter')
-        if not has_digit:
-            raise ValueError('Password must contain at least one number')
-        return v
     
     @field_validator('name')
     @classmethod

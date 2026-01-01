@@ -1,4 +1,5 @@
 from datetime import timedelta
+from logging import getLogger
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session, select
@@ -20,6 +21,7 @@ from app.schemas.user import (
     PasswordReset
 )
 
+logger = getLogger(__name__)
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
@@ -30,6 +32,7 @@ async def signup(user_data: UserCreate, session: Session = Depends(get_session))
     statement = select(User).where(User.email == user_data.email)
     existing_user = session.exec(statement).first()
     if existing_user:
+        logger.warning(f"Attempt to register with existing email: {user_data.email}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered"
@@ -45,7 +48,7 @@ async def signup(user_data: UserCreate, session: Session = Depends(get_session))
     session.add(user)
     session.commit()
     session.refresh(user)
-    
+    logger.info(f"New user registered: {user.email}")
     return UserResponse(
         id=user.id,
         email=user.email,
