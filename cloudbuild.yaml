@@ -1,0 +1,157 @@
+# =============================================================================
+# Cloud Build — Build & Deploy DataFlow to Cloud Run
+# =============================================================================
+# Trigger this manually or via a Cloud Build trigger:
+#
+#   gcloud builds submit \
+#     --config=cloudbuild.yaml \
+#     --substitutions=_GCP_REGION=us-central1,_ARTIFACT_REGISTRY_REPO=dataflow,_CLOUD_SQL_CONNECTION=your-project:us-central1:your-instance,_BACKEND_URL=https://dataflow-backend-xxxxx-uc.a.run.app
+#
+# Required substitution variables:
+#   _GCP_REGION              - e.g. us-central1
+#   _ARTIFACT_REGISTRY_REPO  - Artifact Registry Docker repo name
+#   _CLOUD_SQL_CONNECTION    - Cloud SQL instance connection name (PROJECT:REGION:INSTANCE)
+#
+# Optional (auto-detected):
+#   _BACKEND_URL             - Backend Cloud Run URL (auto-detected after deploy, but
+#                              needed for frontend build arg on first deploy)
+# =============================================================================
+
+substitutions:
+  _GCP_REGION: asia-south1
+  _ARTIFACT_REGISTRY_REPO: get-scraped/get-scraped-prod
+  _CLOUD_SQL_CONNECTION: "scraperight-br004:asia-south1:getscraped-production-db"   # Must be provided: PROJECT:REGION:INSTANCE
+  _BACKEND_URL: ""            # Set on first deploy, auto-detected on subsequent deploys
+
+steps:
+  # ---------------------------------------------------------------
+  # Step 1: Build the Backend Docker image
+  # ---------------------------------------------------------------
+  - name: "gcr.io/cloud-builders/docker"
+    id: "build-backend"
+    args:
+      - "build"
+      - "-t"
+      - "${_GCP_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dataflow-backend:${SHORT_SHA}"
+      - "-t"
+      - "${_GCP_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dataflow-backend:latest"
+      - "-f"
+      - "backend/Dockerfile"
+      - "backend"
+
+  # ---------------------------------------------------------------
+  # Step 2: Push the Backend image to Artifact Registry
+  # ---------------------------------------------------------------
+  - name: "gcr.io/cloud-builders/docker"
+    id: "push-backend"
+    args:
+      - "push"
+      - "--all-tags"
+      - "${_GCP_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dataflow-backend"
+    waitFor: ["build-backend"]
+
+  # ---------------------------------------------------------------
+  # Step 3: Deploy Backend to Cloud Run
+  # ---------------------------------------------------------------
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    id: "deploy-backend"
+    entrypoint: "gcloud"
+    args:
+      - "run"
+      - "deploy"
+      - "dataflow-backend"
+      - "--image"
+      - "${_GCP_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dataflow-backend:${SHORT_SHA}"
+      - "--region"
+      - "${_GCP_REGION}"
+      - "--platform"
+      - "managed"
+      - "--allow-unauthenticated"
+      - "--add-cloudsql-instances"
+      - "${_CLOUD_SQL_CONNECTION}"
+      - "--set-env-vars"
+      - "ENVIRONMENT=production"
+      - "--port"
+      - "8080"
+    waitFor: ["push-backend"]
+
+  # ---------------------------------------------------------------
+  # Step 4: Get Backend URL (for frontend build arg)
+  # ---------------------------------------------------------------
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    id: "get-backend-url"
+    entrypoint: "bash"
+    args:
+      - "-c"
+      - |
+        # If _BACKEND_URL was provided, use it; otherwise fetch from Cloud Run
+        if [ -n "${_BACKEND_URL}" ]; then
+          echo "${_BACKEND_URL}" > /workspace/backend_url.txt
+        else
+          gcloud run services describe dataflow-backend \
+            --region=${_GCP_REGION} \
+            --format='value(status.url)' > /workspace/backend_url.txt
+        fi
+        echo "Backend URL: $(cat /workspace/backend_url.txt)"
+    waitFor: ["deploy-backend"]
+
+  # ---------------------------------------------------------------
+  # Step 5: Build the Frontend Docker image
+  # ---------------------------------------------------------------
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    id: "build-frontend"
+    entrypoint: "bash"
+    args:
+      - "-c"
+      - |
+        BACKEND_URL=$(cat /workspace/backend_url.txt)
+        docker build \
+          -f Dockerfile.cloudrun \
+          --build-arg VITE_API_BASE_URL=$${BACKEND_URL} \
+          -t ${_GCP_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dataflow-frontend:${SHORT_SHA} \
+          -t ${_GCP_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dataflow-frontend:latest \
+          .
+    waitFor: ["get-backend-url"]
+
+  # ---------------------------------------------------------------
+  # Step 6: Push the Frontend image to Artifact Registry
+  # ---------------------------------------------------------------
+  - name: "gcr.io/cloud-builders/docker"
+    id: "push-frontend"
+    args:
+      - "push"
+      - "--all-tags"
+      - "${_GCP_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dataflow-frontend"
+    waitFor: ["build-frontend"]
+
+  # ---------------------------------------------------------------
+  # Step 7: Deploy Frontend to Cloud Run
+  # ---------------------------------------------------------------
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    id: "deploy-frontend"
+    entrypoint: "gcloud"
+    args:
+      - "run"
+      - "deploy"
+      - "dataflow-frontend"
+      - "--image"
+      - "${_GCP_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dataflow-frontend:${SHORT_SHA}"
+      - "--region"
+      - "${_GCP_REGION}"
+      - "--platform"
+      - "managed"
+      - "--allow-unauthenticated"
+      - "--port"
+      - "8080"
+    waitFor: ["push-frontend"]
+
+# Push images to Artifact Registry
+images:
+  - "${_GCP_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dataflow-backend"
+  - "${_GCP_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REGISTRY_REPO}/dataflow-frontend"
+
+# Build timeout (15 minutes should be plenty)
+timeout: "900s"
+
+options:
+  logging: CLOUD_LOGGING_ONLY

@@ -1,3 +1,13 @@
+# =============================================================================
+# LOCAL DEVELOPMENT ONLY
+# =============================================================================
+# This docker-compose file is for local development. For Cloud Run deployment,
+# use the individual Dockerfiles and cloudbuild.yaml instead.
+#   - Backend:  backend/Dockerfile
+#   - Frontend: Dockerfile.cloudrun
+#   - CI/CD:    cloudbuild.yaml
+# =============================================================================
+
 services:
   # PostgreSQL Database
   db:

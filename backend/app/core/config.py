@@ -12,6 +12,8 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
     
     # Database
+    # Local (docker-compose): postgresql://user:pass@db:5432/dbname
+    # Cloud Run (Cloud SQL):  postgresql://user:pass@/dbname?host=/cloudsql/PROJECT:REGION:INSTANCE
     database_url: str = "postgresql://dataflow:dataflow@db:5432/dataflow"
     
     # JWT Authentication
