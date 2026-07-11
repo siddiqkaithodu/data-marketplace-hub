@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Application lifespan events."""
     # Startup — retry DB init for Cloud Run (Cloud SQL proxy may need a moment)
+    print(settings.dict())
     max_retries = 3
     for attempt in range(1, max_retries + 1):
         try:

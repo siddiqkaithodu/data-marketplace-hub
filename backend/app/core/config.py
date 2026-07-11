@@ -1,3 +1,4 @@
+import os
 from pydantic_settings import BaseSettings
 from pydantic import field_validator, Field
 from functools import lru_cache
@@ -14,10 +15,14 @@ class Settings(BaseSettings):
     # Database
     # Local (docker-compose): postgresql://user:pass@db:5432/dbname
     # Cloud Run (Cloud SQL):  postgresql://user:pass@/dbname?host=/cloudsql/PROJECT:REGION:INSTANCE
-    database_url: str = "postgresql://dataflow:dataflow@db:5432/dataflow"
+    database_url: str = Field(
+        default=os.getenv("DATABASE_URL", "postgresql://dataflow:dataflow@db:5432/dataflow")
+    )
     
     # JWT Authentication
-    secret_key: str = "your-super-secret-key-change-in-production"
+    secret_key: str = Field(
+        default=os.getenv("SECRET_KEY", "your-super-secret-key-change-in-production")
+    )
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     
