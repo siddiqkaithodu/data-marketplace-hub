@@ -21,9 +21,9 @@ COPY . .
 RUN adduser --disabled-password --gecos "" appuser && chown -R appuser:appuser /app
 USER appuser
 
-# Cloud Run injects PORT env var (default 8080)
+# Cloud Run injects PORT; keep a local default so the image also runs outside Cloud Run.
 ENV PORT=8080
-EXPOSE ${PORT}
+EXPOSE 8080
 
-# Run the application (no --reload in production)
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]
+# Run the application without reload in production.
+CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT}"]

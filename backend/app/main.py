@@ -14,9 +14,13 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Application lifespan events."""
     # Startup
-    create_db_and_tables()
-    yield
-    # Shutdown
+    try:
+        create_db_and_tables()
+        yield
+        # Shutdown
+    except Exception as e:
+        logger.error(f"Error during application startup: {e}")
+        raise
 
 
 app = FastAPI(
