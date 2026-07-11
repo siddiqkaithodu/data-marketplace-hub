@@ -98,9 +98,9 @@ steps:
   # ---------------------------------------------------------------
   # Step 5: Build the Frontend Docker image
   # ---------------------------------------------------------------
-  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+  - name: "gcr.io/cloud-builders/docker"
     id: "build-frontend"
-    entrypoint: "bash"
+    entrypoint: "sh"
     args:
       - "-c"
       - |
