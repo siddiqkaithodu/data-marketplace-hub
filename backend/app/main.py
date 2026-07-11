@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 import logging
+import time
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -13,14 +14,21 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan events."""
-    # Startup
-    try:
-        create_db_and_tables()
-        yield
-        # Shutdown
-    except Exception as e:
-        logger.error(f"Error during application startup: {e}")
-        raise
+    # Startup — retry DB init for Cloud Run (Cloud SQL proxy may need a moment)
+    max_retries = 3
+    for attempt in range(1, max_retries + 1):
+        try:
+            create_db_and_tables()
+            logger.info("Database tables initialized successfully")
+            break
+        except Exception as e:
+            if attempt < max_retries:
+                logger.warning(f"DB init attempt {attempt}/{max_retries} failed: {e}. Retrying in 2s...")
+                time.sleep(2)
+            else:
+                logger.error(f"DB init failed after {max_retries} attempts: {e}. App will start without DB init.")
+    yield
+    # Shutdown
 
 
 app = FastAPI(

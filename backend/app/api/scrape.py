@@ -3,7 +3,7 @@ from sqlmodel import Session, select, func
 import secrets
 from datetime import datetime, timezone
 
-from app.core.database import get_session, engine
+from app.core.database import get_session, get_engine
 from app.core.security import get_current_user
 from app.models.user import User
 from app.models.scrape_request import ScrapeRequest, ScrapeStatus
@@ -20,7 +20,7 @@ router = APIRouter(prefix="/scrape", tags=["Scraping"])
 def process_scrape_request(request_id: str):
     """Background task to process scraping (placeholder)."""
     # Create a new session within the background task
-    with Session(engine) as session:
+    with Session(get_engine()) as session:
         statement = select(ScrapeRequest).where(ScrapeRequest.request_id == request_id)
         scrape_request = session.exec(statement).first()
         

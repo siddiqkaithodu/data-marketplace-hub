@@ -70,7 +70,7 @@ steps:
       - "--add-cloudsql-instances"
       - "${_CLOUD_SQL_CONNECTION}"
       - "--set-env-vars"
-      - "ENVIRONMENT=production"
+      - "ENVIRONMENT=production,DATABASE_URL=d,SECRET_KEY=d,BACKEND_CORS_ORIGINS=https://your-frontend-url.run.app"
       - "--port"
       - "8080"
     waitFor: ["push-backend"]
