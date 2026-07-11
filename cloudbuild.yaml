@@ -70,7 +70,7 @@ steps:
       - "--add-cloudsql-instances"
       - "${_CLOUD_SQL_CONNECTION}"
       - "--set-env-vars"
-      - "ENVIRONMENT=$_ENVIRONMENT,DATABASE_URL=$_DATABASE_URL,SECRET_KEY=$_SECRET_KEY,BACKEND_CORS_ORIGINS=$_{BACKEND_CORS_ORIGINS}"
+      - "ENVIRONMENT=$_ENVIRONMENT,DATABASE_URL=$_DATABASE_URL,SECRET_KEY=$_SECRET_KEY,BACKEND_CORS_ORIGINS=${_BACKEND_CORS_ORIGINS}"
       - "--port"
       - "8080"
     waitFor: ["push-backend"]
