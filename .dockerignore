@@ -1,0 +1,35 @@
+# Dependencies (will be installed fresh via npm ci)
+node_modules
+
+# Build outputs
+dist
+dist-ssr
+*-dist
+
+# Git
+.git
+.github
+
+# Backend (not needed for frontend build)
+backend
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode
+.idea
+*.sw?
+
+# Docker
+docker-compose.yml
+Dockerfile
+
+# Misc
+*.log
+.DS_Store
+__pycache__
+.pytest_cache
+.mypy_cache

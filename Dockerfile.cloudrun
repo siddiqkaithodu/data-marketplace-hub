@@ -21,13 +21,16 @@ RUN npm ci
 # Copy application source
 COPY . .
 
+# Strip GitHub Spark runtime import (depends on /_spark/* endpoints not available on Cloud Run)
+RUN sed -i '/import.*@github\/spark\/spark/d' src/main.tsx
+
 # Accept the backend API URL as a build argument
 # Vite inlines VITE_* env vars at build time, so this must be a build arg
 ARG VITE_API_BASE_URL
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 
-# Build the production bundle
-RUN npm run build
+# Build using Cloud Run vite config (strips Spark plugins that cause blank pages)
+RUN npx vite build --config vite.config.cloudrun.ts
 
 # --------------- Stage 2: Serve ---------------
 FROM node:20-alpine
