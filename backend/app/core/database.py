@@ -16,7 +16,7 @@ def get_connection():
         INSTANCE_CONNECTION_NAME,
         "pg8000",  
         user=DB_USER,
-        password=DB_PASS,
+        password=DB_PASSWORD,
         db=DB_NAME
     )
     return conn
