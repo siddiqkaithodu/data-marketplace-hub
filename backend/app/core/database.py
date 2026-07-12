@@ -32,9 +32,6 @@ echo=settings.debug,
             pool_pre_ping=True,       # Verify connections before use
             pool_size=5,              # Cloud Run concurrency-friendly
             max_overflow=10,
-            connect_args={
-                "connect_timeout": 10  # Don't hang forever on bad connections
-            }
         )
     return _engine
 
