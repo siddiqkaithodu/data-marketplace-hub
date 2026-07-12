@@ -1,17 +1,33 @@
+from google.cloud.sql.connector import Connector
 from sqlmodel import SQLModel, create_engine, Session
 from app.core.config import settings
-
+INSTANCE_CONNECTION_NAME =settings.INSTANCE_CONNECTION_NAME
+DB_USER = settings.DB_USER
+DB_PASS = settings.DB_PASS
+DB_NAME = settings.DB_NAME
 # Lazy engine initialization — avoids crash at import time if DB is unreachable
 _engine = None
 
+connector = Connector()
+# Define the connection creator function
+def get_connection():
+    # Change "pg8000" to "pymysql" if you are using MySQL
+    conn = connector.connect(
+        INSTANCE_CONNECTION_NAME,
+        "pg8000",  
+        user=DB_USER,
+        password=DB_PASS,
+        db=DB_NAME
+    )
+    return conn
 
 def get_engine():
     """Get or create the database engine (lazy singleton)."""
     global _engine
     if _engine is None:
         _engine = create_engine(
-            settings.database_url,
-            echo=settings.debug,
+"postgresql+pg8000://",creator=get_connection,
+echo=settings.debug,
             # Cloud SQL / production resilience settings
             pool_pre_ping=True,       # Verify connections before use
             pool_size=5,              # Cloud Run concurrency-friendly
