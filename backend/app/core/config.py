@@ -16,7 +16,19 @@ class Settings(BaseSettings):
     # Local (docker-compose): postgresql://user:pass@db:5432/dbname
     # Cloud Run (Cloud SQL):  postgresql://user:pass@/dbname?host=/cloudsql/PROJECT:REGION:INSTANCE
     database_url: str = Field(
-        default=os.getenv("DATABASE_URL", "postgresql://dataflow:dataflow@db:5432/dataflow")
+        default=os.getenv("DATABASE_URL")
+    )
+    instance_connection_name: str = Field(
+        default=os.getenv("INSTANCE_CONNECTION_NAME")
+    )
+    db_user: str = Field(
+        default=os.getenv("DB_USER")
+    )
+    db_pass: str = Field(
+        default=os.getenv("DB_PASS")
+    )
+    db_name: str = Field(
+        default=os.getenv("DB_NAME")
     )
     
     # JWT Authentication
