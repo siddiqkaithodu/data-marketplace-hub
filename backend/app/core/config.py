@@ -19,7 +19,7 @@ class Settings(BaseSettings):
         default=os.getenv("DATABASE_URL")
     )
     instance_connection_name: str = Field(
-        default=os.getenv("INSTANCE_CONNECTION_NAME")
+        default=os.getenv("CLOUD_SQL_CONNECTION")
     )
     db_user: str = Field(
         default=os.getenv("POSTGRES_USER")
