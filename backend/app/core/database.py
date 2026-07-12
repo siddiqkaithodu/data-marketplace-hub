@@ -1,10 +1,10 @@
 from google.cloud.sql.connector import Connector
 from sqlmodel import SQLModel, create_engine, Session
 from app.core.config import settings
-INSTANCE_CONNECTION_NAME =settings.INSTANCE_CONNECTION_NAME
-DB_USER = settings.DB_USER
-DB_PASS = settings.DB_PASS
-DB_NAME = settings.DB_NAME
+INSTANCE_CONNECTION_NAME =settings.instance_connection_name
+DB_USER = settings.db_user
+DB_PASS = settings.db_pass
+DB_NAME = settings.db_name
 # Lazy engine initialization — avoids crash at import time if DB is unreachable
 _engine = None
 
