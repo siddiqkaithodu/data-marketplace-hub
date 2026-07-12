@@ -10,4 +10,4 @@ alembic==1.14.0
 pydantic[email]
 pydantic-settings==2.7.0
 httpx==0.28.1
-cloud-sql-python-connector[pg8000]
+cloud-sql-python-connector[pg8000]==1.20.4

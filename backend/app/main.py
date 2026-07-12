@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.core.database import create_db_and_tables
+from app.core.database import close_connector, create_db_and_tables
 from app.api import auth, datasets, scrape, account, webhooks
 
 logger = logging.getLogger(__name__)
@@ -30,6 +30,7 @@ async def lifespan(app: FastAPI):
                 logger.error(f"DB init failed after {max_retries} attempts: {e}. App will start without DB init.")
     yield
     # Shutdown
+    close_connector()
 
 
 app = FastAPI(
