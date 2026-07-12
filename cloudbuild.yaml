@@ -20,7 +20,7 @@
 substitutions:
   _GCP_REGION: asia-south1
   _ARTIFACT_REGISTRY_REPO: cloud-run-source-deploy
-  _CLOUD_SQL_CONNECTION: "" # Must be provided by trigger/substitutions: PROJECT:REGION:INSTANCE
+  _CLOUD_SQL_CONNECTION: ${_CLOUD_SQL_CONNECTION} # Must be provided: PROJECT:REGION:INSTANCE
   _BACKEND_URL: ""            # Set on first deploy, auto-detected on subsequent deploys
 
 steps:
