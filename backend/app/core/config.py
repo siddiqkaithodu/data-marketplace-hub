@@ -22,13 +22,13 @@ class Settings(BaseSettings):
         default=os.getenv("INSTANCE_CONNECTION_NAME")
     )
     db_user: str = Field(
-        default=os.getenv("DB_USER")
+        default=os.getenv("POSTGRES_USER")
     )
     db_pass: str = Field(
-        default=os.getenv("DB_PASS")
+        default=os.getenv("POSTGRES_PASS")
     )
     db_name: str = Field(
-        default=os.getenv("DB_NAME")
+        default=os.getenv("POSTGRES_DB")
     )
     
     # JWT Authentication
