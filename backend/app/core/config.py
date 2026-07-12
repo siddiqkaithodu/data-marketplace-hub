@@ -25,7 +25,7 @@ class Settings(BaseSettings):
         default=os.getenv("POSTGRES_USER")
     )
     db_pass: str = Field(
-        default=os.getenv("POSTGRES_PASS")
+        default=os.getenv("POSTGRES_PASSWORD")
     )
     db_name: str = Field(
         default=os.getenv("POSTGRES_DB")
