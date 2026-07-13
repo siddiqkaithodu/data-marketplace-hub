@@ -1,3 +1,4 @@
+import ssl
 from google.cloud.sql.connector import Connector
 from sqlmodel import SQLModel, create_engine, Session
 from app.core.config import settings
@@ -9,6 +10,7 @@ DB_NAME = settings.db_name
 _engine = None
 
 connector = Connector()
+ssl_context = ssl.create_default_context()
 # Define the connection creator function
 def get_connection():
     # Change "pg8000" to "pymysql" if you are using MySQL
@@ -17,7 +19,8 @@ def get_connection():
         "pg8000",  
         user=DB_USER,
         password=DB_PASSWORD,
-        db=DB_NAME
+        db=DB_NAME,
+        ssl_context=ssl_context
     )
     return conn
 
